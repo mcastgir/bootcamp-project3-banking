@@ -19,6 +19,7 @@ import com.nttdata.bootcamp.banking.model.document.Account;
 import com.nttdata.bootcamp.banking.service.AccountService;
 import com.nttdata.bootcamp.banking.service.ClientService;
 import com.nttdata.bootcamp.banking.service.ProductService;
+import com.nttdata.bootcamp.banking.util.Constant;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,6 +30,8 @@ import reactor.core.publisher.Mono;
 
 import java.util.Date;
 import java.util.UUID;
+
+import static com.nttdata.bootcamp.banking.util.Constant.*;
 
 /**
  * Clase para los métodos de la implementación de servicio de la cuenta.
@@ -56,14 +59,25 @@ public class AccountServiceImpl implements AccountService {
         /* Set parameters init */
         account.setAccountNumber(UUID.randomUUID().toString());
         account.setAccountInterbankNumber(UUID.randomUUID().toString());
-        account.setCodeAccountState("RA");
+        account.setCodeAccountState(ACCOUNT_STATE_REQUEST_ACCOUNT);
         account.setDateRegister(new Date());
         /* Initiliaze proccess */
         return clientService.findByCode(account.getCodeClient()).flatMap(
                 clientResult -> {
-                    if(clientResult.getCodeClientType().equals("PER")) {
+                    if(clientResult.getCodeClientType().equals(CLIENT_TYPE_PERSON)) {
                         return productService.findByCode(account.getCodeProduct()).flatMap(productResult -> {
-                            if(productResult.getCodeProductType().equals("CBA")) {
+                            // INI Proyecto semana 2 validacion cliente personal vip
+                            if( account.getCodeProduct().equals(PRODUCT_SAVINGS_ACCOUNT)  &&
+                                    account.getAccountType().equals(ACCOUNT_TYPE_VIP)){
+                                if(productResult.getCodeProductType().equals(PRODUCT_TYPE_CREDIT_ACCOUNTS)){
+                                    return accountDao.save(account);
+                                }else{
+                                    return Mono.error(new RuntimeException("Se requiere una tarjeta de " +
+                                            "crédito para apertura una cuenta de tipo VIP."));
+                                }
+                            }
+                            // FIN Proyecto semana 2 validacion cliente personal vip
+                           else if(productResult.getCodeProductType().equals(PRODUCT_TYPE_BANK_ACCOUNTS)) {
                                 account.setCreditLine(0.00);
                                 account.setAvailableAmount(0.00);
                                 return findByCodeClient(clientResult.getCode())
@@ -78,10 +92,10 @@ public class AccountServiceImpl implements AccountService {
                                                 return Mono.error(new RuntimeException("Ya existe una cuenta bancaria de ese tipo para ese cliente"));
                                             }
                                         });
-                            } else if(productResult.getCodeProductType().equals("CRE")) {
+                            } else if(productResult.getCodeProductType().equals(PRODUCT_TYPE_CREDIT_ACCOUNTS)) {
                                 if(account.getCreditLine() > 0) {
                                     account.setAvailableAmount(account.getCreditLine());
-                                    if(productResult.getCode().equals("CRE-PER")) {
+                                    if(productResult.getCode().equals(PRODUCT_PERSONAL_CREDIT)) {
                                         return findByCodeClient(clientResult.getCode())
                                                 .filter(a -> a.getCodeProduct().equals(productResult.getCode()))
                                                 .hasElements()
@@ -92,7 +106,7 @@ public class AccountServiceImpl implements AccountService {
                                                         return Mono.error(new RuntimeException("Ya existe un credito de ese tipo para ese cliente"));
                                                     }
                                                 });
-                                    } else if(productResult.getCode().equals("CRE-TRJ")) {
+                                    } else if(productResult.getCode().equals(PRODUCT_CREDIT_CARD)) {
                                         return accountDao.save(account);
                                     } else {
                                         return Mono.error(new RuntimeException("Cliente Personal solo puede tener un credito personal o Tarjeta de Credito"));
@@ -104,21 +118,32 @@ public class AccountServiceImpl implements AccountService {
                                 return Mono.error(new RuntimeException("No existe codigo tipo de producto"));
                             }
                         });
-                    } else if(clientResult.getCodeClientType().equals("EMP")) {
+                    } else if(clientResult.getCodeClientType().equals(CLIENT_TYPE_BUSINESS)) {
                         return productService.findByCode(account.getCodeProduct()).flatMap(productResult -> {
-                            if(productResult.getCodeProductType().equals("CBA")) {
+                            // INI Proyecto semana 2 validacion cliente empresa pyme
+                            if( account.getCodeProduct().equals(PRODUCT_CURRENT_ACCOUNT)  &&
+                                    account.getAccountType().equals(ACCOUNT_TYPE_PYME)){
+                                if(productResult.getCodeProductType().equals(PRODUCT_TYPE_CREDIT_ACCOUNTS)){
+                                    return accountDao.save(account);
+                                }else{
+                                    return Mono.error(new RuntimeException("Se requiere una tarjeta de " +
+                                            "crédito para apertura una empresarial de tipo  mype."));
+                                }
+                            }
+                            // FIN Proyecto semana 2 validacion cliente empresa pyme
+                           else if(productResult.getCodeProductType().equals(PRODUCT_TYPE_BANK_ACCOUNTS)) {
                                 account.setCreditLine(0.00);
                                 account.setAvailableAmount(0.00);
-                                if(productResult.getCode().equals("CTA-CRT")) {
+                                if(productResult.getCode().equals(PRODUCT_CURRENT_ACCOUNT)) {
                                     return accountDao.save(account);
                                 } else {
                                     return Mono.error(new RuntimeException("Cliente Empresarial Solo puede tener cuentas corrientes"));
                                 }
-                            } else if(productResult.getCodeProductType().equals("CRE")) {
+                            } else if(productResult.getCodeProductType().equals(PRODUCT_TYPE_CREDIT_ACCOUNTS)) {
                                 if(account.getCreditLine() > 0){
                                     account.setAvailableAmount(account.getCreditLine());
-                                    if(productResult.getCode().equals("CRE-EMP") ||
-                                            productResult.getCode().equals("CRE-TRJ")) {
+                                    if(productResult.getCode().equals(PRODUCT_BUSINESS_CREDIT) ||
+                                            productResult.getCode().equals(PRODUCT_CREDIT_CARD)) {
                                         return accountDao.save(account);
                                     } else {
                                         return Mono.error(new RuntimeException("Cliente Empresarial solo puede tener creditos empresariales y tarjeta de credito"));
