@@ -34,6 +34,9 @@ import reactor.core.publisher.Mono;
 import java.util.Date;
 import java.util.UUID;
 
+import static com.nttdata.bootcamp.banking.util.Constant.OPERATION_TYPE_ENRTY;
+import static com.nttdata.bootcamp.banking.util.Constant.OPERATION_TYPE_EXIT;
+
 /**
  * Clase para los métodos de la implementación de servicio del movimiento.
  */
@@ -63,7 +66,7 @@ public class MovementServiceImpl implements MovementService {
         movement.setCode(UUID.randomUUID().toString());
         movement.setDateRegister(new Date());
         return movementTypeService.findByCode(movement.getCodeMovementType()).flatMap(movementType -> {
-            if(movementType.getOperationType().equals("I")) {
+            if(movementType.getOperationType().equals(OPERATION_TYPE_ENRTY)) {
                 return accountService.findByAccountNumber(movement.getAccountNumber()).flatMap(account -> {
                     movement.setPreviousAmount(account.getAvailableAmount());
                     movement.setFinalAmount(MathUtil.sum(movement.getPreviousAmount(),
@@ -74,7 +77,7 @@ public class MovementServiceImpl implements MovementService {
                                 return movementDao.save(movement);
                             });
                 });
-            } else if(movementType.getOperationType().equals("S")) {
+            } else if(movementType.getOperationType().equals(OPERATION_TYPE_EXIT)) {
                 return accountService.findByAccountNumber(movement.getAccountNumber()).flatMap(account -> {
                     if(account.getAvailableAmount() >= movement.getMovementAmount()) {
                         movement.setPreviousAmount(account.getAvailableAmount());

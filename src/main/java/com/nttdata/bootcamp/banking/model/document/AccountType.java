@@ -26,39 +26,17 @@ import java.util.Date;
  */
 @Data
 @ToString
-@Document(collection="account")
-public class Account {
+@Document(collection="account_type")
+public class AccountType {
 
-    /** Identificador de la Cuenta */
+    /** Identificador de tipo de cuenta */
     @Id
     private String id;
 
-    /** Número de cuenta */
-    private String accountNumber;
+    private String code;
+    private String name;
 
-    /** Número de cuenta interbancaria */
-    private String accountInterbankNumber;
 
-    /** Código de Cliente */
-    private String codeClient;
-
-    /** Código de Producto */
-    private String codeProduct;
-
-    /** Fecha de registro */
-    private Date dateRegister;
-
-    /** Línea de Crédito */
-    private double creditLine;
-
-    private double availableAmount;
-
-    /** Código de Estado de Cuenta */
-    private String codeAccountState;
-
-    private double amountMinimunOpen;
-
-    private String accountType;
 
 
 }
