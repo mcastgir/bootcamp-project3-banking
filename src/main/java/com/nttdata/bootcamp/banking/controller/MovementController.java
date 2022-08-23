@@ -15,6 +15,7 @@
 package com.nttdata.bootcamp.banking.controller;
 
 import com.nttdata.bootcamp.banking.model.document.Movement;
+import com.nttdata.bootcamp.banking.model.dto.TransferDto;
 import com.nttdata.bootcamp.banking.service.MovementService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -99,6 +100,12 @@ public class MovementController {
                 ResponseEntity.ok()
                         .contentType(MediaType.APPLICATION_JSON)
                         .body(this.movementService.findAll()));
+    }
+
+    @PostMapping("/transfer")
+    public Mono<ResponseEntity<Movement>> transfer(@RequestBody TransferDto transferDto){
+        return this.movementService.transfer(transferDto)
+                .map(m -> new ResponseEntity<>(m, HttpStatus.OK));
     }
 
 }

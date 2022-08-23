@@ -18,6 +18,7 @@ import com.nttdata.bootcamp.banking.model.dao.AccountDao;
 import com.nttdata.bootcamp.banking.model.dao.MovementDao;
 import com.nttdata.bootcamp.banking.model.document.Movement;
 import com.nttdata.bootcamp.banking.model.document.MovementType;
+import com.nttdata.bootcamp.banking.model.dto.TransferDto;
 import com.nttdata.bootcamp.banking.service.AccountService;
 import com.nttdata.bootcamp.banking.service.MovementService;
 import com.nttdata.bootcamp.banking.service.MovementTypeService;
@@ -159,4 +160,39 @@ public class MovementServiceImpl implements MovementService {
                 .doAfterTerminate(() -> log.info("Finish FindAll Movement"));
     }
 
+    public Flux<Movement> findAllByAccountNumber(String accountNumber) {
+        return movementDao.findByAccountNumber(accountNumber);
+    }
+
+    @Override
+    public Mono<Movement> transfer(TransferDto transferDto) {
+        /* Validations */
+        if(transferDto.getCodeAccountOrigin().equals(transferDto.getCodeAccountDestination()))
+            return Mono.error(new RuntimeException("La cuenta de origen no debe ser igual a la cuenta de destino"));
+        if(transferDto.getAmountTransfer() <= 0)
+            return Mono.error(new RuntimeException("Monto a transferir debe ser mayor a cero"));
+        /* Proccess */
+        return accountService.findByAccountNumber(transferDto.getCodeAccountOrigin()).flatMap(account -> {
+           return productService.findByCode(account.getCodeProduct()).flatMap(product -> {
+              if(product.getCodeProductType().equals("CBA")) {
+                  Movement initialMovement = new Movement();
+                  initialMovement.setAccountNumber(transferDto.getCodeAccountOrigin());
+                  initialMovement.setAccountNumberDestination(transferDto.getCodeAccountDestination());
+                  initialMovement.setCodeMovementType(transferDto.getCodeTypeTransfer());
+                  initialMovement.setMovementAmount(transferDto.getAmountTransfer());
+                  return insert(initialMovement).flatMap(movementIni -> {
+                      Movement finalMovement = new Movement();
+                      finalMovement.setAccountNumber(transferDto.getCodeAccountDestination());
+                      finalMovement.setCodeMovementType("DT");
+                      finalMovement.setMovementAmount(transferDto.getAmountTransfer());
+                      return insert(finalMovement);
+                  });
+              } else {
+                  return Mono.error(new RuntimeException("Cuenta de origen no puede ser de crédito"));
+              }
+           });
+        }).doFirst(() -> log.info("Begin Transfer Movement"))
+                .doOnNext(m -> log.info(m.toString()))
+                .doAfterTerminate(() -> log.info("Finish Transfer Movement"));
+    }
 }
