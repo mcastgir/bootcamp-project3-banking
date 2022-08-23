@@ -15,6 +15,7 @@
 package com.nttdata.bootcamp.banking.service;
 
 import com.nttdata.bootcamp.banking.model.document.Account;
+import com.nttdata.bootcamp.banking.model.dto.AccountDto;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -26,5 +27,7 @@ public interface AccountService extends GenericService<Account, String> {
     Mono<Account> findByAccountNumber(String accountNumber);
 
     Flux<Account> findByCodeClient(String code);
+
+    Flux<AccountDto> findAllDetailsByCodeClient(String code);
 
 }

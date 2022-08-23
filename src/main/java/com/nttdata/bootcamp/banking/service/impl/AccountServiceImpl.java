@@ -16,8 +16,11 @@ package com.nttdata.bootcamp.banking.service.impl;
 
 import com.nttdata.bootcamp.banking.model.dao.AccountDao;
 import com.nttdata.bootcamp.banking.model.document.Account;
+import com.nttdata.bootcamp.banking.model.document.Movement;
+import com.nttdata.bootcamp.banking.model.dto.AccountDto;
 import com.nttdata.bootcamp.banking.service.AccountService;
 import com.nttdata.bootcamp.banking.service.ClientService;
+import com.nttdata.bootcamp.banking.service.MovementService;
 import com.nttdata.bootcamp.banking.service.ProductService;
 import com.nttdata.bootcamp.banking.util.Constant;
 import org.slf4j.Logger;
@@ -28,7 +31,9 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.UUID;
 
 import static com.nttdata.bootcamp.banking.util.Constant.*;
@@ -49,6 +54,8 @@ public class AccountServiceImpl implements AccountService {
     private ClientService clientService;
     @Autowired
     private ProductService productService;
+    @Autowired
+    private MovementService movementService;
 
     /**
      * Método que realiza la acción insertar datos del document
@@ -233,4 +240,20 @@ public class AccountServiceImpl implements AccountService {
                 .doAfterTerminate(() -> log.info("Finish FindAll Account"));
     }
 
+    @Override
+    public Flux<AccountDto> findAllDetailsByCodeClient(String code) {
+        /*return accountDao.findByCodeClient(code)
+                .flatMapIterable(account -> {
+            AccountDto accountDto = new AccountDto();
+            accountDto.setAccountNumber(account.getAccountNumber());
+            accountDto.setAccountInterbankNumber(account.getAccountInterbankNumber());
+            accountDto.setCodeClient(account.getCodeClient());
+            accountDto.setCodeProduct(account.getCodeProduct());
+            accountDto.setCreditLine(account.getCreditLine());
+            accountDto.setAvailableAmount(account.getAvailableAmount());
+            accountDto.setMovements(movementService.findAllByAccountNumber(account.getAccountNumber()));
+            return accountDto;
+        }).;*/
+        return null;
+    }
 }

@@ -39,6 +39,8 @@ public class Movement {
     /** Número de cuenta */
     private String accountNumber;
 
+    private String accountNumberDestination;
+
     /** Fecha de registro */
     private Date dateRegister;
 

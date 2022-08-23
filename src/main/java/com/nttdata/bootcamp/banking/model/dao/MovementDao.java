@@ -16,6 +16,7 @@ package com.nttdata.bootcamp.banking.model.dao;
 
 import com.nttdata.bootcamp.banking.model.document.Movement;
 import org.springframework.data.mongodb.repository.ReactiveMongoRepository;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 /**
@@ -28,5 +29,7 @@ public interface MovementDao extends ReactiveMongoRepository<Movement, String> {
      * @return Mono retorna el Movement, tipo Mono
      */
     Mono<Movement> findByCode(String code);
+
+    Flux<Movement> findByAccountNumber(String accountNumber);
 
 }

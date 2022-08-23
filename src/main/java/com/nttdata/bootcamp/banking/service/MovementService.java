@@ -16,6 +16,8 @@ package com.nttdata.bootcamp.banking.service;
 
 import com.nttdata.bootcamp.banking.model.document.Account;
 import com.nttdata.bootcamp.banking.model.document.Movement;
+import com.nttdata.bootcamp.banking.model.dto.TransferDto;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 /**
@@ -24,5 +26,9 @@ import reactor.core.publisher.Mono;
 public interface MovementService extends GenericService<Movement, String> {
 
     Mono<Movement> findByCode(String code);
+
+    Flux<Movement> findAllByAccountNumber(String accountNumber);
+
+    Mono<Movement> transfer(TransferDto transferDto);
 
 }
