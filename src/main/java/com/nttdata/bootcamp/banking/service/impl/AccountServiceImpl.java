@@ -18,6 +18,8 @@ import com.nttdata.bootcamp.banking.model.dao.AccountDao;
 import com.nttdata.bootcamp.banking.model.document.Account;
 import com.nttdata.bootcamp.banking.model.document.Movement;
 import com.nttdata.bootcamp.banking.model.dto.AccountDto;
+import com.nttdata.bootcamp.banking.model.dto.Client;
+import com.nttdata.bootcamp.banking.model.dto.Product;
 import com.nttdata.bootcamp.banking.service.AccountService;
 import com.nttdata.bootcamp.banking.service.ClientService;
 import com.nttdata.bootcamp.banking.service.MovementService;
@@ -65,84 +67,69 @@ public class AccountServiceImpl implements AccountService {
         account.setAccountInterbankNumber(UUID.randomUUID().toString());
         account.setCodeAccountState("RA");
         account.setDateRegister(new Date());
+        /* Zip */
+        Mono<Client> clientMono = clientService.findByCode(account.getCodeClient());
+        Mono<Product> productMono = productService.findByCode(account.getCodeProduct());
+        Mono<Boolean> flagMono = findByCodeClient(account.getCodeClient())
+                .filter(a -> a.getCodeProduct().equals(account.getCodeProduct()))
+                .hasElements();
         /* Initiliaze proccess */
-        return clientService.findByCode(account.getCodeClient()).flatMap(
-                clientResult -> {
-                    if(clientResult.getCodeClientType().equals("PER")) {
-                        return productService.findByCode(account.getCodeProduct()).flatMap(productResult -> {
-                            if(productResult.getCodeProductType().equals("CBA")) {
+        return Mono.zip(clientMono, productMono, flagMono)
+                .flatMap(data -> {
+                    Client client = data.getT1();
+                    Product product = data.getT2();
+                    boolean existAccount = data.getT3();
+                    if(client.getCodeClientType().equals("PER")) {
+                        if(product.getCodeProductType().equals("CBA")) {
+                            if(!existAccount) {
                                 account.setCreditLine(0.00);
                                 account.setAvailableAmount(0.00);
-                                return findByCodeClient(clientResult.getCode())
-                                        .filter(a -> a.getCodeProduct().equals(productResult.getCode()))
-                                        .hasElements()
-                                        .flatMap(flag -> {
-                                            if(!flag) {
-                                                return accountDao.save(account);
-                                            }else {
-                                                /*return Mono.just(ResponseEntity.badRequest()
-                                                        .body("Ya existe una cuenta bancaria de ese tipo para ese cliente"));*/
-                                                return Mono.error(new RuntimeException("Ya existe una cuenta bancaria de ese tipo para ese cliente"));
-                                            }
-                                        });
-                            } else if(productResult.getCodeProductType().equals("CRE")) {
-                                if(account.getCreditLine() > 0) {
-                                    account.setAvailableAmount(account.getCreditLine());
-                                    if(productResult.getCode().equals("CRE-PER")) {
-                                        return findByCodeClient(clientResult.getCode())
-                                                .filter(a -> a.getCodeProduct().equals(productResult.getCode()))
-                                                .hasElements()
-                                                .flatMap(flag -> {
-                                                    if(!flag) {
-                                                        return accountDao.save(account);
-                                                    }else {
-                                                        return Mono.error(new RuntimeException("Ya existe un credito de ese tipo para ese cliente"));
-                                                    }
-                                                });
-                                    } else if(productResult.getCode().equals("CRE-TRJ")) {
-                                        return accountDao.save(account);
-                                    } else {
-                                        return Mono.error(new RuntimeException("Cliente Personal solo puede tener un credito personal o Tarjeta de Credito"));
-                                    }
-                                } else {
-                                    return Mono.error(new RuntimeException("Dato línea de credito es requerido"));
-                                }
+                                return accountDao.save(account);
                             } else {
-                                return Mono.error(new RuntimeException("No existe codigo tipo de producto"));
+                                return Mono.error(new RuntimeException("Ya existe una cuenta bancaria de ese tipo para ese cliente"));
                             }
-                        });
-                    } else if(clientResult.getCodeClientType().equals("EMP")) {
-                        return productService.findByCode(account.getCodeProduct()).flatMap(productResult -> {
-                            if(productResult.getCodeProductType().equals("CBA")) {
-                                account.setCreditLine(0.00);
-                                account.setAvailableAmount(0.00);
-                                if(productResult.getCode().equals("CTA-CRT")) {
+                        } else if (product.getCodeProductType().equals("CRE")) {
+                            if(account.getCreditLine() > 0) {
+                                if(!existAccount) {
+                                    account.setAvailableAmount(account.getCreditLine());
                                     return accountDao.save(account);
                                 } else {
-                                    return Mono.error(new RuntimeException("Cliente Empresarial Solo puede tener cuentas corrientes"));
-                                }
-                            } else if(productResult.getCodeProductType().equals("CRE")) {
-                                if(account.getCreditLine() > 0){
-                                    account.setAvailableAmount(account.getCreditLine());
-                                    if(productResult.getCode().equals("CRE-EMP") ||
-                                            productResult.getCode().equals("CRE-TRJ")) {
-                                        return accountDao.save(account);
-                                    } else {
-                                        return Mono.error(new RuntimeException("Cliente Empresarial solo puede tener creditos empresariales y tarjeta de credito"));
-                                    }
-                                } else {
-                                    return Mono.error(new RuntimeException("Dato línea de credito es requerido"));
+                                    return Mono.error(new RuntimeException("Ya existe un credito de ese tipo para ese cliente"));
                                 }
                             } else {
-                                return Mono.error(new RuntimeException("No existe codigo tipo de producto"));
+                                return Mono.error(new RuntimeException("Dato línea de credito es requerido"));
                             }
-                        });
+                        } else {
+                            return Mono.error(new RuntimeException("No existe codigo tipo de producto"));
+                        }
+                    } else if (client.getCodeClientType().equals("EMP")) {
+                        if (product.getCodeProductType().equals("CBA")) {
+                            if(product.getCode().equals("CTA-CRT")) {
+                                account.setCreditLine(0.00);
+                                account.setAvailableAmount(0.00);
+                                return accountDao.save(account);
+                            } else {
+                                return Mono.error(new RuntimeException("Cliente Empresarial Solo puede tener cuentas corrientes"));
+                            }
+                        } else if (product.getCodeProductType().equals("CRE")) {
+                            if(account.getCreditLine() > 0){
+                                if(product.getCode().equals("CRE-EMP") ||
+                                        product.getCode().equals("CRE-TRJ")) {
+                                    account.setAvailableAmount(account.getCreditLine());
+                                    return accountDao.save(account);
+                                } else {
+                                    return Mono.error(new RuntimeException("Cliente Empresarial solo puede tener creditos empresariales y tarjeta de credito"));
+                                }
+                            } else {
+                                return Mono.error(new RuntimeException("Dato línea de credito es requerido"));
+                            }
+                        } else {
+                            return Mono.error(new RuntimeException("No existe codigo tipo de producto"));
+                        }
                     } else {
                         return Mono.error(new RuntimeException("El codigo de tipo cliente no existe"));
                     }
-                }).doFirst(() -> log.info("Begin Insert Account"))
-                .doOnNext(a -> log.info(a.toString()))
-                .doAfterTerminate(() -> log.info("Finish Insert Account"));
+                });
     }
 
     /**
