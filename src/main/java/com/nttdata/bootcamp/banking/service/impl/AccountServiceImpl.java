@@ -24,6 +24,7 @@ import com.nttdata.bootcamp.banking.service.AccountService;
 import com.nttdata.bootcamp.banking.service.ClientService;
 import com.nttdata.bootcamp.banking.service.MovementService;
 import com.nttdata.bootcamp.banking.service.ProductService;
+import com.nttdata.bootcamp.banking.util.Constant;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,6 +37,8 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
+
+import static com.nttdata.bootcamp.banking.util.Constant.*;
 
 /**
  * Clase para los métodos de la implementación de servicio de la cuenta.

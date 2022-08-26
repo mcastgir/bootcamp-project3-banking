@@ -16,7 +16,9 @@ package com.nttdata.bootcamp.banking.controller;
 
 import com.nttdata.bootcamp.banking.model.document.Account;
 import com.nttdata.bootcamp.banking.service.AccountService;
+import com.nttdata.bootcamp.banking.service.ClientService;
 import com.nttdata.bootcamp.banking.util.ApiResponse;
+import com.nttdata.bootcamp.banking.util.Constant;
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,6 +28,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+
+import java.util.concurrent.CompletionService;
+
+import static com.nttdata.bootcamp.banking.util.Constant.NUMERO_UNO;
 
 /**
  * Clase de controladora para invocar a métodos CRUD con rest api.
@@ -38,15 +44,28 @@ public class AccountController {
     @Autowired
     private AccountService accountService;
 
+    @Autowired
+    private ClientService clientService;
+
     /**
      * Método que realiza la acción insertar datos del document
      * @return Mono retorna el Account, tipo Mono
      */
     @PostMapping
     @CircuitBreaker(name = "createAccountCB", fallbackMethod = "fallbackCreateAccount")
-    public Mono<ResponseEntity<Account>> create(@RequestBody Account account){
+    public Mono<ResponseEntity<Account>> create(@RequestBody Account account) {
+
+        // validar monto minimo de apertura
+        if (account.getAmountMinimunOpen() < Constant.NUMERO_CERO) {
+            return   Mono.error(new RuntimeException("Estimado usuario, el monto mínimo de apertura no puede ser menor que cero."));
+        }
+
+
+
+        // Insertar cuenta
         return this.accountService.insert(account)
                 .map(a -> new ResponseEntity<>(a, HttpStatus.OK));
+
     }
 
     public Mono<ResponseEntity<String>> fallbackCreateAccount(Account account, CallNotPermittedException e) {
